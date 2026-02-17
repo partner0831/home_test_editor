@@ -1,59 +1,31 @@
 import { Product, DeliveryRule, Offer } from "../types/types";
 
-export class Basket {
-  private catalogue: Product[];
-  private deliveryRules: DeliveryRule[];
-  private offers: Offer[];
-  private items: Product[] = [];
+export function calculateSubtotal(items: Product[]): number {
+  return items.reduce((sum, item) => sum + item.price, 0);
+}
 
-  constructor(
-    catalogue: Product[],
-    deliveryRules: DeliveryRule[],
-    offers: Offer[]
-  ) {
-    this.catalogue = catalogue;
-    this.deliveryRules = deliveryRules;
-    this.offers = offers;
-  }
+export function calculateDiscount(items: Product[], offers: Offer[]): number {
+  return offers.reduce((acc, offer) => acc + offer.apply(items), 0);
+}
 
-  add(productCode: string): void {
-    const product = this.catalogue.find((p) => p.code === productCode);
-    if (!product) {
-      throw new Error(`Product with code "${productCode}" not found`);
-    }
-    this.items.push(product);
-  }
+export function calculateDelivery(amount: number, rules: DeliveryRule[]): number {
+  const rule = rules.find(r => amount >= r.minSpend);
+  return rule?.charge ?? 0;
+}
 
-  getItems(): Product[] {
-    return [...this.items];
-  }
+// floor to 2dp to avoid floating point rounding up (e.g. 54.375 -> 54.37 not 54.38)
+export function calculateTotal(
+  items: Product[],
+  offers: Offer[],
+  rules: DeliveryRule[]
+): number {
+  const subtotal = calculateSubtotal(items);
+  const discount = calculateDiscount(items, offers);
+  const net = subtotal - discount;
+  const delivery = calculateDelivery(net, rules);
+  return Math.floor((net + delivery) * 100) / 100;
+}
 
-  getSubtotal(): number {
-    return this.items.reduce((sum, item) => sum + item.price, 0);
-  }
-
-  getDiscount(): number {
-    return this.offers.reduce((total, offer) => total + offer.apply(this.items), 0);
-  }
-
-  getDeliveryCharge(amountAfterDiscount: number): number {
-    const rule = this.deliveryRules.find(
-      (rule) => amountAfterDiscount >= rule.minSpend
-    );
-    return rule ? rule.charge : 0;
-  }
-
-  total(): string {
-    const subtotal = this.getSubtotal();
-    const discount = this.getDiscount();
-    const afterDiscount = subtotal - discount;
-    const delivery = this.getDeliveryCharge(afterDiscount);
-    const total = afterDiscount + delivery;
-
-    return `$${(Math.floor(total * 100) / 100).toFixed(2)}`;
-  }
-
-  clear(): void {
-    this.items = [];
-  }
+export function formatPrice(amount: number): string {
+  return `$${amount.toFixed(2)}`;
 }

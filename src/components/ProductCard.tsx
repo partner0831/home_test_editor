@@ -1,6 +1,7 @@
 import { Product } from "../types/types";
+import { useBasketContext } from "../context/BasketContext";
+import { formatPrice } from "../services/Basket";
 
-// just a simple map for the widget colour indicators
 const COLORS: { [code: string]: string } = {
   R01: "#e74c3c",
   G01: "#27ae60",
@@ -9,10 +10,11 @@ const COLORS: { [code: string]: string } = {
 
 interface Props {
   product: Product;
-  onAdd: (code: string) => void;
 }
 
-function ProductCard({ product, onAdd }: Props) {
+function ProductCard({ product }: Props) {
+  const { addItem } = useBasketContext();
+
   return (
     <div className="product-card">
       <div
@@ -20,8 +22,8 @@ function ProductCard({ product, onAdd }: Props) {
         style={{ backgroundColor: COLORS[product.code] || "#ccc" }}
       />
       <h3>{product.name}</h3>
-      <p className="product-price">${product.price.toFixed(2)}</p>
-      <button onClick={() => onAdd(product.code)}>Add to Basket</button>
+      <p className="product-price">{formatPrice(product.price)}</p>
+      <button onClick={() => addItem(product.code)}>Add to Basket</button>
     </div>
   );
 }

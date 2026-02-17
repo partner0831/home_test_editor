@@ -1,46 +1,56 @@
-# Getting Started with Create React App
+# Acme Widget Co — Sales Basket System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A proof of concept shopping basket for Acme Widget Co, built with React and TypeScript.
 
-## Available Scripts
+## Getting Started
 
-In the project directory, you can run:
+```bash
+npm install
+npm start       # runs on http://localhost:3000
+npm test        # runs all unit tests
+npm run build   # production build
+```
 
-### `npm start`
+## What It Does
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- Displays three widget products (Red, Green, Blue) with add-to-basket functionality
+- Applies tiered delivery charges: $4.95 (under $50), $2.95 (under $90), free ($90+)
+- Applies special offers — currently "buy one red widget, get the second half price"
+- Basket persists across page refreshes via localStorage
+- Individual item removal and full basket clearing
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Project Structure
 
-### `npm test`
+```
+src/
+├── types/          # TypeScript interfaces (Product, DeliveryRule, Offer, BasketState)
+├── constants/      # Product catalogue, delivery rules, offer definitions
+├── services/       # Pure business logic functions (pricing, discounts, delivery)
+├── hooks/          # useBasket — custom hook with useReducer + useEffect
+├── context/        # BasketContext — shared basket state via React Context
+├── components/     # ProductCard, BasketSummary
+├── App.tsx         # Main layout wiring everything together
+└── App.css         # All styling
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Where to Look
 
-### `npm run build`
+### Business Logic — `src/services/Basket.ts`
+All pricing logic lives here as **pure functions** — `calculateSubtotal`, `calculateDiscount`, `calculateDelivery`, `calculateTotal`. These are fully testable without any React dependency. The rounding approach uses `Math.floor` (truncate to 2dp) rather than standard rounding, which matters when half-price discounts produce 3-decimal-place totals like $54.375.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### State Management — `src/hooks/useBasket.ts`
+The custom `useBasket` hook uses `useReducer` for immutable state updates with a discriminated union action type. Calculated values (subtotal, discount, delivery, total) are derived via `useMemo` so they only recompute when items change. The basket is persisted to localStorage through `useEffect`, and restored on page load via the reducer's lazy initializer.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Offer System — `src/constants/catalogue.ts`
+Offers are defined as objects with an `apply` function, making the system extensible. Adding a new offer (e.g. "buy 2 blue widgets get 1 free") is just adding another object to the array — no changes to the basket or UI code needed.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Context — `src/context/BasketContext.tsx`
+Basket state is shared across components through React Context, so `ProductCard` and `BasketSummary` can consume it independently without prop drilling.
 
-### `npm run eject`
+## Assumptions
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- Prices are in USD
+- The "half price" discount on the second red widget applies per pair (3 red widgets = 1 discounted, 4 = 2 discounted)
+- Delivery charge is calculated on the subtotal **after** discounts are applied
+- Final total is floored to 2 decimal places (not rounded), matching the expected test outputs
+- An empty basket still incurs the minimum delivery charge
